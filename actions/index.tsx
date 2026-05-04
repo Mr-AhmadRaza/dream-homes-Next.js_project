@@ -4,6 +4,8 @@ import { FilterValues } from '@/types'
 import cloudinary from '@/utils/cloudinary'
 import { Prisma, Property } from '@prisma/client'
 
+export type PropertyInput = Omit<Property, 'availableFrom'> & { availableFrom: Date }
+
 // Get properties with filters and sorting
 async function getProperties(
   filters: FilterValues,
@@ -74,7 +76,7 @@ async function postProperty(data: Property, userId: string, images: string[]) {
 }
 
 // Edit property
-async function editProperty(data: Property, propertyId: number, images: string[]) {
+async function editProperty(data: PropertyInput, propertyId: number, images: string[]) {
   try {
     const existingProperty = await db.property.findUnique({
       where: { id: propertyId },
@@ -193,7 +195,7 @@ async function sendMessage(message: string, senderId: string, propertyId: number
 async function getUserProperties(userId: number) {
   try {
     const res = await db.property.findMany({
-      where: { ownerId: userId, isSold:true },
+      where: { ownerId: userId, isSold: true },
       include: { images: true },
     })
     return res || []

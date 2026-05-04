@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { ConfigProvider } from "antd";
-import theme from "@/config/themeConfig";
+import theme from "./config/themeConfig";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { rubik } from "@/prisma/fonts";

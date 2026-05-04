@@ -1,5 +1,6 @@
 "use client"
-import { getPropertyById, postProperty, } from '@/actions'
+import { getPropertyById, editProperty } from '@/actions'
+import type { PropertyInput } from '@/actions'
 import { Property } from '@prisma/client'
 import { Card, Form, Input, InputNumber, Radio, Space, Button, DatePicker, Upload, UploadFile, Alert } from 'antd'
 import { useSession } from 'next-auth/react'
@@ -11,10 +12,12 @@ import type { RcFile } from "antd/es/upload";
 import { useMessage } from '@/context/MessageContext'
 import { PropertyWithImagesAndOwner } from '@/db'
 import { useParams } from 'next/navigation'
-import { editProperty } from "@/actions"
 import BackButton from '@/components/BackButton'
 
 type FileType = Parameters<GetProp<UploadProps, 'beforeUpload'>>[0];
+type FormValues = Omit<Property, 'availableFrom'> & {
+  availableFrom: dayjs.Dayjs | null
+}
 
 export default function EditProperty() {
   const { data: session } = useSession()
@@ -26,15 +29,10 @@ export default function EditProperty() {
   const params = useParams()
   const id = params?.id
 
-  console.log(fileList)
-
   const fetchPropertyDetails = async () => {
     try {
       if (!id) return
-
       const property = await getPropertyById(Number(id))
-      console.log(property)
-
       if (property) {
         setPropertyDetails(property)
         const existingImages = property?.images?.map((img, index) => ({
@@ -50,22 +48,23 @@ export default function EditProperty() {
     }
   }
 
- useEffect(() => {
-  fetchPropertyDetails();
-}, [id]);
+  useEffect(() => {
+    fetchPropertyDetails();
+  }, [id]);
 
-useEffect(() => {
-  if (propertyDetails) {
-    form.setFieldsValue({
-      ...propertyDetails,
-      availableFrom: propertyDetails.availableFrom ? dayjs(propertyDetails.availableFrom) : null
-    });
-  }
-}, [propertyDetails, form]);
+  useEffect(() => {
+    if (propertyDetails) {
+      form.setFieldsValue({
+        ...propertyDetails,
+        availableFrom: propertyDetails.availableFrom
+          ? dayjs(propertyDetails.availableFrom)
+          : null
+      });
+    }
+  }, [propertyDetails, form]);
 
-  const onFinish = async (values: Property) => {
-
-    if (!propertyDetails) return; // 🔥 fix: prevent null crash
+  const onFinish = async (values: FormValues) => {
+    if (!propertyDetails) return;
 
     const getBase64 = (file: FileType): Promise<string> =>
       new Promise((resolve, reject) => {
@@ -86,28 +85,26 @@ useEffect(() => {
           }
         })
       )
+
       const cleanValues = {
         ...values,
         price: Number(values.price),
         area: Number(values.area),
         availableFrom: values.availableFrom
-          ? dayjs(values.availableFrom).toDate()
+          ? values.availableFrom.toDate()
           : new Date(),
       }
 
       const response = await editProperty(
-        cleanValues,
+        cleanValues as unknown as PropertyInput,
         propertyDetails.id,
         base64Images
       )
       if (response) {
-        showMessage("Properties edited successfuly", "success")
-        console.log(response)
+        showMessage("Property edited successfully", "success")
       }
-
     } catch (error) {
-      showMessage("something went wrong", "error")
-
+      showMessage("Something went wrong", "error")
       console.log("Error editing property", error)
     }
   }
@@ -138,24 +135,24 @@ useEffect(() => {
     imgWindow?.document.write(image.outerHTML);
   };
 
-  // 🔥 fix: prevent crash if propertyDetails is null
   if (!propertyDetails) {
     return <div className='container'>Loading...</div>
   }
 
-  // 🔥 fix: safe owner check
   if (session && +session.user.id !== propertyDetails.ownerId) {
-    return <div className='container'>
-      <Alert title="your not allowed to edit this property" type="error"></Alert>
-    </div>
+    return (
+      <div className='container'>
+        <Alert message="You are not allowed to edit this property" type="error" />
+      </div>
+    )
   }
 
   return (
     <div className='formContainer'>
       <h1 className="heading">Edit Property</h1>
-
       <BackButton />
-      <Form form={form}
+      <Form
+        form={form}
         onFinish={onFinish}
         labelCol={{ span: 6 }}
         wrapperCol={{ span: 12 }}>
@@ -220,9 +217,9 @@ useEffect(() => {
             <Radio.Group buttonStyle='solid'>
               <Radio.Button value={"ONE_RK"}>1RK</Radio.Button>
               <Radio.Button value={"ONE_BHK"}>1BHK</Radio.Button>
-              <Radio.Button value={"TWO_BHK"}>2BhK</Radio.Button>
+              <Radio.Button value={"TWO_BHK"}>2BHK</Radio.Button>
               <Radio.Button value={"THREE_BHK"}>3BHK</Radio.Button>
-              <Radio.Button value={"FOUR_BHK"}>4BhK</Radio.Button>
+              <Radio.Button value={"FOUR_BHK"}>4BHK</Radio.Button>
             </Radio.Group>
           </Form.Item>
           <Form.Item
@@ -251,7 +248,7 @@ useEffect(() => {
               <Radio.Button value={"NO"}>No</Radio.Button>
             </Radio.Group>
           </Form.Item>
-          <Form.Item label={"Upload Iamges"} valuePropName='fileList'>
+          <Form.Item label={"Upload Images"} valuePropName='fileList'>
             <Upload
               multiple
               listType="picture-card"
@@ -266,7 +263,7 @@ useEffect(() => {
           <Form.Item
             label="Preferred Tenants"
             name={"preferredTenants"}
-            rules={[{ required: true, message: "Please input the property prefered tenants" }]}>
+            rules={[{ required: true, message: "Please input preferred tenants" }]}>
             <Radio.Group buttonStyle='solid'>
               <Radio.Button value={"FAMILY"}>Family</Radio.Button>
               <Radio.Button value={"BACHELORS"}>Bachelor</Radio.Button>
@@ -275,7 +272,7 @@ useEffect(() => {
           <Form.Item
             label="Property Type"
             name={"propertyType"}
-            rules={[{ required: true, message: "Please input the property property type" }]}>
+            rules={[{ required: true, message: "Please input property type" }]}>
             <Radio.Group buttonStyle='solid'>
               <Radio.Button value={"APARTMENT"}>Apartment</Radio.Button>
               <Radio.Button value={"INDEPENDENTS"}>Independent</Radio.Button>
@@ -290,7 +287,7 @@ useEffect(() => {
           <Form.Item
             label="Available From"
             name="availableFrom"
-            rules={[{ required: true, message: "Please input the property available from" }]}>
+            rules={[{ required: true, message: "Please input available from date" }]}>
             <DatePicker style={{ width: "50%" }} />
           </Form.Item>
           <Space>
