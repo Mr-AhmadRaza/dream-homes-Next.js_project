@@ -9,38 +9,47 @@ const authOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "select_account", // ✅ force account selection
+          prompt: "select_account",
           access_type: "offline",
           response_type: "code",
         },
       },
     }),
   ],
-  database: process.env.DATABASE_URL,
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async signIn({ profile }: { profile: { email: string; name: string; picture: string } }) {
-      const userExists = await db.user.findFirst({
-        where: { email: profile.email },
-      })
-      if (!userExists) {
-        await db.user.create({
-          data: {
-            email: profile.email,
-            username: profile.name,
-            image: profile.picture,
-          },
+    async signIn({ profile }: { profile?: any }) {
+      try {
+        if (!profile?.email) return false
+        const userExists = await db.user.findFirst({
+          where: { email: profile.email },
         })
+        if (!userExists) {
+          await db.user.create({
+            data: {
+              email: profile.email,
+              username: profile.name,
+              image: profile.picture,
+            },
+          })
+        }
+        return true
+      } catch (error) {
+        console.error("SignIn error:", error)
+        return false
       }
-      return true
     },
-
     async session({ session }: { session: any }) {
-      const user = await db.user.findFirst({
-        where: { email: session.user.email },
-      })
-      if (user) session.user.id = user.id.toString()
-      return session
+      try {
+        const user = await db.user.findFirst({
+          where: { email: session.user.email },
+        })
+        if (user) session.user.id = user.id.toString()
+        return session
+      } catch (error) {
+        console.error("Session error:", error)
+        return session
+      }
     },
   },
 }
