@@ -1,31 +1,33 @@
 {
   "compilerOptions": {
-    "target": "ES2020",                  // modern JS
-    "lib": ["dom", "dom.iterable", "esnext"], // browser + modern JS
+    "target": "ES2020",
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",          // important for Node modules
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "types": ["node"],                   // makes 'process' recognized
+    "types": ["node"],
     "plugins": [
       { "name": "next" }
     ],
     "paths": {
       "@/*": ["./*"]
     }
+    // Removed baseUrl! The @ alias works without it in Next.js
   },
   "include": [
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    "prisma.config.ts",                  // include Prisma config file
+    "**/*.css",
+    "prisma.config.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
